@@ -60,7 +60,7 @@ def main(args):
 				if isinstance(data, list):
 					file_extension, file_data = data
 					file_name_full = file_name + data[0]
-			with open(os.path.join(path, file_name_full), "w+b") as p:
+			with open(os.path.join(path, file_name_full.rstrip("\0")), "w+b") as p:
 				p.write(file_data)
 		f.close()
 
