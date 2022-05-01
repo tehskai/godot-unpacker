@@ -1,17 +1,15 @@
 # godot-unpacker.py
-# version 0.1
 # https://github.com/tehskai/godot-unpacker
 
-import sys
-import os
-import pathlib
-import mmap
-import struct
+import sys, os, pathlib, mmap, struct
 
 def main(args):
-	rip_textures = True # change to False if you want textures untouched in godot .tex format
+	unpack_containers = True # change to False if you want asset containers untouched in godot format (.tex, .stex, .oggstr)
 	if not args:
-		return "Usage: python godot-unpacker.py data.pck"
+		print("Usage:")
+		print("python godot-unpacker.py data.pck")
+		print("python godot-unpacker.py game.exe")
+		return
 	if not os.path.exists(args[0]):
 		return "Error: file not found"
 	file_list = []
@@ -19,12 +17,12 @@ def main(args):
 		f = mmap.mmap(d.fileno(), 0)
 		magic = bytes.fromhex('47 44 50 43') # GDPC
 		if f.read(4) == magic:
-			print(args[0] + " looks like a pck archive")
+			print(args[0] + " looks like a .pck archive")
 			f.seek(0)
 		else:
 			f.seek(-4, os.SEEK_END)
 			if f.read(4) == magic:
-				print(args[0] + " looks like a self-contained exe")
+				print(args[0] + " looks like a self-contained .exe")
 				f.seek(-12, os.SEEK_END)
 				main_offset = int.from_bytes(f.read(8), byteorder='little')
 				f.seek(f.tell()-main_offset-8)
@@ -49,22 +47,23 @@ def main(args):
 
 		for packed_file in file_list:
 			path = os.path.join("output", os.path.dirname(packed_file['path']))
-			file_name_full = os.path.basename(packed_file['path'])
+			file_name_full = os.path.basename(packed_file['path']).rstrip("\0")
 			file_name, file_extension = os.path.splitext(file_name_full)
 			pathlib.Path(path).mkdir(parents=True, exist_ok=True)
 			f.seek(packed_file['offset'])
 			file_data = f.read(packed_file['size'])
 			# do md5 check here
-			if file_extension == '.tex' and rip_textures:
-				data = rip_texture(file_data)
-				if isinstance(data, list):
-					file_extension, file_data = data
-					file_name_full = file_name + data[0]
-			with open(os.path.join(path, file_name_full.rstrip("\0")), "w+b") as p:
+			if unpack_containers:
+				if file_extension == '.stex' or file_extension == '.tex' or file_extension == '.oggstr':
+					data = unpack_container(file_data)
+					if isinstance(data, list):
+						file_extension, file_data = data
+						file_name_full = file_name + file_extension
+			with open(os.path.join(path, file_name_full), "w+b") as p:
 				p.write(file_data)
 		f.close()
 
-def rip_texture(data):
+def unpack_container(data):
 	# webp
 	start = data.find(bytes.fromhex("52 49 46 46"))
 	if start >= 0:
@@ -82,6 +81,12 @@ def rip_texture(data):
 	if start >= 0:
 		end = data.find(bytes.fromhex("FF D9")) + 2
 		return [".jpg", data[start:end]]
+	
+	# ogg
+	start = data.find(bytes.fromhex("4F 67 67 53"))
+	if start >= 0:
+		return [".ogg", data[start:-4]]
+	
 	return False
 
 if __name__ == "__main__":
