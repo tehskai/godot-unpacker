@@ -15,8 +15,4 @@ python godot-unpacker.py your_godot_game.exe
 ```
 extracted game files should be in "output" directory.
 ## converting textures
-unpacker will convert .tex texture files into corresponding image format (webp, png or jpg) automatically. if you want .tex files to remain intact change this variable:
-```
-unpack_containers = True
-```
-to False.
+unpacker will convert .tex texture files into corresponding image format (webp, png or jpg) automatically. if you want .tex files to remain intact make sure ```unpack_containers``` is set to ```False```.
