@@ -74,8 +74,13 @@ def main(args):
 					import_source = import_source.group(1).replace("://","/")
 					import_file_list.append({"path": import_path, "source": import_source})
 
-			if file_extension in ['.stex', '.tex', '.oggstr']:
-				data = unpack_container(file_data)
+			if file_extension in ['.stex', '.tex']:
+				data = unpack_image_container(file_data)
+				if isinstance(data, list):
+					file_data = data[1]
+
+			if file_extension in ['.oggstr']:
+				data = unpack_sound_container(file_data)
 				if isinstance(data, list):
 					file_data = data[1]
 
@@ -90,7 +95,7 @@ def main(args):
 			import_source = append_to_filename(import_source, "_import")
 		os.rename(output_dir + "/" + import_file["path"], import_source)
 
-def unpack_container(data):
+def unpack_image_container(data):
 	# webp
 	start = data.find(bytes.fromhex("52 49 46 46"))
 	if start >= 0:
@@ -109,11 +114,14 @@ def unpack_container(data):
 		end = data.find(bytes.fromhex("FF D9")) + 2
 		return [".jpg", data[start:end]]
 	
+	return False
+
+def unpack_sound_container(data):
 	# ogg
 	start = data.find(bytes.fromhex("4F 67 67 53"))
 	if start >= 0:
 		return [".ogg", data[start:-4]]
-	
+
 	return False
 
 def append_to_filename(path, text):
